@@ -1,0 +1,19 @@
+apiVersion: cscg.live/v1alpha1
+kind: Blueprint
+metadata:
+  name: user-bp
+  namespace: authentik
+spec:
+  version: 1
+  context: 
+    name: ABC
+  entries: 
+    - identifiers:
+        username: user
+      model: authentik_core.user
+      attrs:
+        name: 
+          $Context: name
+        is_active: true
+        email: user@mail.com
+        type: external

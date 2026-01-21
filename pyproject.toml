@@ -1,0 +1,30 @@
+[project]
+name = "authentik_blueprints_operator"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "authentik",
+    "cachetools>=6.2.4",
+    "deepdiff[optimize]>=8.6.1",
+    "kopf>=1.40.0",
+    "kubesdk[cli]>=0.3.3",
+]
+
+[tool.uv]
+override-dependencies = [
+    # authentik and kubesdk are incompatible
+    "pyyaml==6.0.3",
+]
+
+[tool.uv.sources]
+authentik = { git = "https://github.com/goauthentik/authentik", tag = "version/2025.10.3" }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[project.scripts]
+authentik_blueprints_operator = "authentik_blueprints_operator.main:main"

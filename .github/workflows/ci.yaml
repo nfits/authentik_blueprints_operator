@@ -1,0 +1,46 @@
+name: CI
+on:
+  push:
+    tags:
+      - "*"
+    workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    name: CI
+    runs-on: ubuntu-slim
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        name: Checkout
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run `nix flake check`
+        run: nix flake check
+      - name: Build Image
+        run: nix build .#authentik_blueprints_operator_image
+
+      - name: Push to ghcr.io
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+
+          nix run nixpkgs#skopeo -- copy --insecure-policy --dest-creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} docker-archive:result docker://ghcr.io/nfits/authentik_blueprints_operator/operator:authentik_$VERSION
+
+      - name: Push to ghcr.io as `latest`
+        run: nix run nixpkgs#skopeo -- copy --insecure-policy --dest-creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} docker-archive:result docker://ghcr.io/nfits/authentik_blueprints_operator/operator:latest
+
+      - name: Build CRD
+        run: nix build .#authentik_blueprints_operator_crd
+      - name: Prepare CRD for Release
+        run: cp -L result authentik_blueprints_operator_crd.yaml
+      - name: Upload CRD to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: authentik_blueprints_operator_crd.yaml

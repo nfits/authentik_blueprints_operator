@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentik-blueprints-operator
+  namespace: authentik
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      application: authentik-blueprints-operator
+  template:
+    metadata:
+      labels:
+        application: authentik-blueprints-operator
+    spec:
+      serviceAccountName: authentik-blueprints-operator-account
+      containers:
+        - name: authentik-blueprints-operator
+          image: ghcr.io/nfits/authentik_blueprints_operator/operator:latest
+          envFrom:
+            - secretRef:
+                name: authentik-secrets
+            - secretRef:
+                name: cscg26-authentik
+          volumeMounts:
+            - mountPath: /postgres-creds
+              name: postgres-creds
+              readOnly: true
+              recursiveReadOnly: Disabled
+      volumes:
+        - name: postgres-creds
+          secret:
+            defaultMode: 420
+            secretName: authentik-postgres-credentials

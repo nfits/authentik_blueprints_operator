@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: usercm
+  namespace: authentik
+data:
+  name: usercm-AAA
+---
+apiVersion: cscg.live/v1alpha1
+kind: Blueprint
+metadata:
+  name: usercm-bp
+  namespace: authentik
+spec:
+  version: 1
+  contextFrom:
+    - configMapRef:
+        name: usercm
+  entries:
+    - identifiers:
+        username: usercm
+      model: authentik_core.user
+      attrs:
+        name:
+          $Context: name
+        is_active: true
+        email: usercm@mail.com
+        type: external
