@@ -125,3 +125,4 @@ class BlueprintCRD(CustomK8sResourceDefinition):
     versions = [BlueprintV1Alpha1]
     crd_short_names_ = ["bp"]
     crd_singular_ = "blueprint"
+    crd_list_kind_ = "BlueprintList"
