@@ -160,27 +160,34 @@
                 workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = self; };
               in
               pythonSets.mkVirtualEnv "authentik_blueprints_operator-env" workspace.deps.default;
-            authentik_blueprints_operator_image = pkgs.dockerTools.buildImage {
+            authentik_blueprints_operator_image = pkgs.dockerTools.buildLayeredImage {
               name = "authentik_blueprints_operator";
               tag = "latest";
               created = "now";
 
-              copyToRoot = pkgs.buildEnv {
-                name = "image-root";
-                paths = with pkgs; [
-                  fakeNss
-                  dockerTools.usrBinEnv
-                  dockerTools.binSh
-                  dockerTools.caCertificates
-                  busybox
-                  authentik_blueprints_operator
-                ];
-                pathsToLink = [
-                  "/bin"
-                  "/etc"
-                  "/var"
-                ];
-              };
+              contents = with pkgs; [
+                dockerTools.usrBinEnv
+                dockerTools.binSh
+                dockerTools.caCertificates
+                busybox
+                authentik_blueprints_operator
+              ];
+
+              fakeRootCommands = ''
+                #!${pkgs.runtimeShell}
+
+                mkdir -p ./etc
+
+                cat ${pkgs.fakeNss}/etc/passwd > ./etc/passwd
+                cat ${pkgs.fakeNss}/etc/group > ./etc/group
+
+                if [ -f ${pkgs.fakeNss}/etc/shadow ]; then
+                  cat ${pkgs.fakeNss}/etc/shadow > ./etc/shadow
+                fi
+                if [ -f ${pkgs.fakeNss}/etc/nsswitch.conf ]; then
+                  cat ${pkgs.fakeNss}/etc/nsswitch.conf > ./etc/nsswitch.conf
+                fi
+              '';
 
               config = {
                 Cmd = [ "authentik_blueprints_operator" ];
