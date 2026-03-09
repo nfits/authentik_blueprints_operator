@@ -124,6 +124,7 @@ class BlueprintV1Alpha1(CustomK8sResource):
 # labels, etc.) are dropped so the generated YAML is minimal—the cluster adds them at apply time.
 _CRD_METADATA_KEEPS = frozenset({"name"})
 
+
 def _strip_crd(obj: Any) -> Any:
     if isinstance(obj, dict):
         out = {}
@@ -135,7 +136,11 @@ def _strip_crd(obj: Any) -> Any:
             # CRD resource metadata: only keep name (and optional annotations); drop
             # ownerReferences, finalizers, labels, etc. (they belong on the cluster copy).
             if k == "metadata" and isinstance(v, dict):
-                v = {kk: _strip_crd(vv) for kk, vv in v.items() if kk in _CRD_METADATA_KEEPS}
+                v = {
+                    kk: _strip_crd(vv)
+                    for kk, vv in v.items()
+                    if kk in _CRD_METADATA_KEEPS
+                }
             else:
                 v = _strip_crd(v)
             out[k] = v

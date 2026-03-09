@@ -74,7 +74,7 @@
                 };
                 pythonSets =
                   (pkgs.callPackage pyproject-nix.build.packages {
-                    python = pkgs.python3;
+                    python = pkgs.python314;
                   }).overrideScope
                     (
                       pkgs.lib.composeManyExtensions [
@@ -141,6 +141,11 @@
                               pkgs.gcc13
                             ];
                           });
+                          aiohttp = prev.aiohttp.overrideAttrs (old: {
+                            nativeBuildInputs = old.nativeBuildInputs ++ [
+                              final.setuptools
+                            ];
+                          });
                           opencontainers = prev.opencontainers.overrideAttrs (old: {
                             nativeBuildInputs = old.nativeBuildInputs ++ [ final.setuptools ];
                           });
@@ -159,7 +164,11 @@
 
                 workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = self; };
               in
-              pythonSets.mkVirtualEnv "authentik_blueprints_operator-env" workspace.deps.default;
+              (pythonSets.mkVirtualEnv "authentik_blueprints_operator-env" workspace.deps.default).overrideAttrs
+                (old: {
+                  # django-tenants and pyrad (authentik deps) both ship docs/Makefile; ignore collision
+                  venvIgnoreCollisions = [ "lib/python3.14/site-packages/docs/Makefile" ];
+                });
             authentik_blueprints_operator_image = pkgs.dockerTools.buildLayeredImage {
               name = "authentik_blueprints_operator";
               tag = "latest";
