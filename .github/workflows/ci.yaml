@@ -10,10 +10,9 @@ permissions:
   packages: write
 
 jobs:
-  build:
-    name: CI
+  check:
+    name: Check
     runs-on: ubuntu-slim
-    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         name: Checkout
@@ -22,6 +21,17 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run `nix flake check`
         run: nix flake check
+  build:
+    name: CI
+    runs-on: ubuntu-slim
+    timeout-minutes: 30
+    needs: check
+    steps:
+      - uses: actions/checkout@v6
+        name: Checkout
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Image
         run: nix build .#authentik_blueprints_operator_image
 
