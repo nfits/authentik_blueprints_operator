@@ -23,7 +23,7 @@ jobs:
         run: nix flake check
   build:
     name: CI
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: check
     steps:
