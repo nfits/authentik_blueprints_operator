@@ -120,9 +120,50 @@ class BlueprintV1Alpha1(CustomK8sResource):
     status: BlueprintStatus
 
 
+# Keys we keep in the CRD resource's metadata; the rest (ownerReferences, finalizers,
+# labels, etc.) are dropped so the generated YAML is minimal—the cluster adds them at apply time.
+_CRD_METADATA_KEEPS = frozenset({"name"})
+
+def _strip_crd(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k == "x-kubernetes-list-map-keys" and v == []:
+                continue
+            if k == "x-kubernetes-validations" and v == []:
+                continue
+            # CRD resource metadata: only keep name (and optional annotations); drop
+            # ownerReferences, finalizers, labels, etc. (they belong on the cluster copy).
+            if k == "metadata" and isinstance(v, dict):
+                v = {kk: _strip_crd(vv) for kk, vv in v.items() if kk in _CRD_METADATA_KEEPS}
+            else:
+                v = _strip_crd(v)
+            out[k] = v
+        return out
+    if isinstance(obj, list):
+        return [_strip_crd(i) for i in obj]
+    return obj
+
+
+class _CRDWithoutListMapKeys:
+    """Wrapper so to_dict() omits x-kubernetes-list-map-keys (not allowed in many CRD validators)."""
+
+    def __init__(self, crd: Any) -> None:
+        self._crd = crd
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._crd, name)
+
+    def to_dict(self, drop_nones: bool = False) -> dict:
+        return _strip_crd(self._crd.to_dict(drop_nones))
+
+
 @dataclass
 class BlueprintCRD(CustomK8sResourceDefinition):
     versions = [BlueprintV1Alpha1]
     crd_short_names_ = ["bp"]
     crd_singular_ = "blueprint"
     crd_list_kind_ = "BlueprintList"
+
+    def build(self) -> _CRDWithoutListMapKeys:
+        return _CRDWithoutListMapKeys(super().build())
