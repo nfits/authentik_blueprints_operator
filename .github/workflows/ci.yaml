@@ -3,7 +3,7 @@ on:
   push:
     tags:
       - "*"
-    workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -37,13 +37,29 @@ jobs:
 
       - name: Push to ghcr.io
         if: startsWith(github.ref, 'refs/tags/')
+        env:
+          CONTAINERS_REGISTRIES_CONF: ${{ runner.temp }}/registries.conf
         run: |
+          : > "$CONTAINERS_REGISTRIES_CONF"
+
           VERSION=${GITHUB_REF#refs/tags/}
 
-          nix run nixpkgs#skopeo -- copy --insecure-policy --dest-creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} docker-archive:result docker://ghcr.io/nfits/authentik_blueprints_operator/operator:authentik_$VERSION
+          nix run nixpkgs#skopeo -- copy --insecure-policy \
+            --dest-creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
+            docker-archive:result \
+            docker://ghcr.io/nfits/authentik_blueprints_operator/operator:authentik_$VERSION
 
       - name: Push to ghcr.io as `latest`
-        run: nix run nixpkgs#skopeo -- copy --insecure-policy --dest-creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} docker-archive:result docker://ghcr.io/nfits/authentik_blueprints_operator/operator:latest
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          CONTAINERS_REGISTRIES_CONF: ${{ runner.temp }}/registries.conf
+        run: |
+          : > "$CONTAINERS_REGISTRIES_CONF"
+
+          nix run nixpkgs#skopeo -- copy --insecure-policy \
+            --dest-creds ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
+            docker-archive:result \
+            docker://ghcr.io/nfits/authentik_blueprints_operator/operator:latest
 
       - name: Build CRD
         run: nix build .#authentik_blueprints_operator_crd
